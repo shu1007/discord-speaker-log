@@ -1,6 +1,6 @@
 {
   "name": "discord-speaker-log",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Discord Speaker Log Bot",
   "main": "bot.js",
   "scripts": {
