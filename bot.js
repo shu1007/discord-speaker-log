@@ -73,12 +73,12 @@ const addChannel = async (textChannel, voiceChannelName) => {
 };
 
 const deleteChannel = async (textChannel, voiceCnannelName) => {
-  const voiceChannel = getVoiceChannel(voiceCnannelName);
+  const guildId = textChannel.guild.id;
+  const voiceChannel = getVoiceChannel(voiceCnannelName, guildId);
   if (voiceChannel === null) {
     return `${voiceCnannelName} is not exists.`;
   }
   const voiceChannelId = voiceChannel.id;
-  const guildId = textChannel.guild.id;
   const noChannelMessase = `${voiceCnannelName} was not added ${textChannel.name}.`;
   const voiceChannelCache =
     cache[guildId] !== undefined ? cache[guildId][voiceChannelId] : undefined;
