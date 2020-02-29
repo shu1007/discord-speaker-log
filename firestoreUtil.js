@@ -86,3 +86,40 @@ exports.deleteTextChannel = async (guildId, voiceChannnelId, textChannelId) => {
 
   return result;
 };
+
+exports.deleteVoiceChannel = async (guildId, voiceChannnelId) => {
+  let result = true;
+  await db
+    .collection(GUILDS)
+    .doc(guildId)
+    .collection(VOICE_CHANNNELS)
+    .doc(voiceChannnelId)
+    .delete()
+    .catch(e => {
+      console.error(e);
+      result = false;
+    });
+
+  return result;
+};
+
+exports.deleteTextChannelBatch = async (
+  guildId,
+  textChannelId,
+  voiceChannnelIds
+) => {
+  let result = true;
+
+  const guildRef = db.collection(GUILDS).doc(guildId);
+  const batch = db.batch();
+  voiceChannnelIds.forEach(vId => {
+    batch.update(guildRef.collection(VOICE_CHANNNELS).doc(vId), {
+      textChannels: firebase.firestore.FieldValue.arrayRemove(textChannelId)
+    });
+  });
+  batch.commit().catch(e => {
+    result = false;
+    console.error(e);
+  });
+  return result;
+};

@@ -3,6 +3,8 @@ const {
   addTextChannel,
   addVoiceChannel,
   deleteTextChannel,
+  deleteVoiceChannel,
+  deleteTextChannelBatch,
   getGuildData
 } = require("./firestoreUtil");
 require("dotenv").config();
@@ -12,7 +14,35 @@ let cache = {};
 
 client.on("ready", () => console.log("start server."));
 
-client.addListener("voiceStateUpdate", async (_, member) => {
+client.on("channelDelete", async channel => {
+  const guildId = channel.guild.id;
+  if (cache[guildId] === undefined) {
+    cache[guildId] = await getGuildData(guildId);
+  }
+  const channelId = channel.id;
+  if (channel.type === "voice" && cache[guildId][channelId] !== undefined) {
+    const message = (await deleteVoiceChannel(guildId, channelId))
+      ? `#${channel.name} is deleted`
+      : `Error occured for deleting #${channel.name}.`;
+    console.log(message);
+  } else if (channel.type === "text") {
+    const voiceChannelIds = Object.entries(cache[guildId])
+      .filter(kvp => kvp[1].textChannels.includes(channelId))
+      .map(kvp => kvp[0]);
+    if (voiceChannelIds.length < 1) return;
+    const message = (await deleteTextChannelBatch(
+      guildId,
+      channelId,
+      voiceChannelIds
+    ))
+      ? `#${channel.name} is deleted`
+      : `Error occured for deleting #${channel.name}.`;
+
+    console.log(message);
+  }
+});
+
+client.on("voiceStateUpdate", async (_, member) => {
   if (!member.mute) {
     const guildId = member.guild.id;
     const voiceChannelId = member.voiceChannel.id;
@@ -49,6 +79,7 @@ const addChannel = async (textChannel, voiceChannelName) => {
     cache[guildId] = {};
   }
   const voiceChannelCache = cache[guildId][voiceChannelId];
+  const sucessMessage = `#${voiceChannelName} is added!`;
   const errorMessage = "[Add channel]Error has occurred.";
   const textChannelId = textChannel.id;
 
@@ -59,13 +90,14 @@ const addChannel = async (textChannel, voiceChannelName) => {
     }
     if (await addTextChannel(guildId, voiceChannelId, textChannelId)) {
       textChannels.push(textChannel.id);
+      return sucessMessage;
     } else {
       return errorMessage;
     }
   } else {
     if (await addVoiceChannel(guildId, voiceChannelId, textChannelId)) {
       cache[guildId][voiceChannelId] = { textChannels: [textChannelId] };
-      return `#${voiceChannelName} is added!`;
+      return sucessMessage;
     } else {
       return errorMessage;
     }
