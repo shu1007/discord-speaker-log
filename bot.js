@@ -20,26 +20,33 @@ client.on("channelDelete", async channel => {
     cache[guildId] = await getGuildData(guildId);
   }
   const channelId = channel.id;
+  let message;
   if (channel.type === "voice" && cache[guildId][channelId] !== undefined) {
-    const message = (await deleteVoiceChannel(guildId, channelId))
-      ? `#${channel.name} is deleted`
-      : `Error occured for deleting #${channel.name}.`;
-    console.log(message);
+    if (await deleteVoiceChannel(guildId, channelId)) {
+      delete cache[guildId][channelId];
+      message = `#${channel.name} is deleted`;
+    } else {
+      message = `Error occured for deleting #${channel.name}.`;
+    }
   } else if (channel.type === "text") {
     const voiceChannelIds = Object.entries(cache[guildId])
       .filter(kvp => kvp[1].textChannels.includes(channelId))
       .map(kvp => kvp[0]);
     if (voiceChannelIds.length < 1) return;
-    const message = (await deleteTextChannelBatch(
-      guildId,
-      channelId,
-      voiceChannelIds
-    ))
-      ? `#${channel.name} is deleted`
-      : `Error occured for deleting #${channel.name}.`;
+    if (await deleteTextChannelBatch(guildId, channelId, voiceChannelIds)) {
+      voiceChannelIds.forEach(
+        vid =>
+          (cache[guildId][vid].textChannels = cache[guildId][
+            vid
+          ].textChannels.filter(tid => tid !== channelId))
+      );
 
-    console.log(message);
+      message = `All #${channel.name} are deleted`;
+    } else {
+      message = `Error occured for deleting #${channel.name}.`;
+    }
   }
+  console.log(message);
 });
 
 client.on("voiceStateUpdate", async (_, member) => {
@@ -69,6 +76,9 @@ const getVoiceChannel = (chName, guildId) => {
 };
 
 const addChannel = async (textChannel, voiceChannelName) => {
+  if (voiceChannelName === undefined) {
+    return "Please specify a channel name.";
+  }
   const guildId = textChannel.guild.id;
   const voiceChannel = getVoiceChannel(voiceChannelName, guildId);
   if (voiceChannel === null) {
@@ -104,14 +114,17 @@ const addChannel = async (textChannel, voiceChannelName) => {
   }
 };
 
-const deleteChannel = async (textChannel, voiceCnannelName) => {
+const deleteChannel = async (textChannel, voiceChannelName) => {
+  if (voiceChannelName === undefined) {
+    return "Please specify a channel name.";
+  }
   const guildId = textChannel.guild.id;
-  const voiceChannel = getVoiceChannel(voiceCnannelName, guildId);
+  const voiceChannel = getVoiceChannel(voiceChannelName, guildId);
   if (voiceChannel === null) {
-    return `${voiceCnannelName} is not exists.`;
+    return `${voiceChannelName} is not exists.`;
   }
   const voiceChannelId = voiceChannel.id;
-  const noChannelMessase = `${voiceCnannelName} was not added to ${textChannel.name}.`;
+  const noChannelMessase = `${voiceChannelName} was not added to ${textChannel.name}.`;
   const voiceChannelCache =
     cache[guildId] !== undefined ? cache[guildId][voiceChannelId] : undefined;
 
@@ -126,7 +139,7 @@ const deleteChannel = async (textChannel, voiceCnannelName) => {
       voiceChannelCache.textChannels = textChannels.filter(
         id => id !== textChannel.id
       );
-      return `#${voiceCnannelName} is deleted!`;
+      return `#${voiceChannelName} is deleted!`;
     } else {
       return "[Delete Channel]Error has occurred.";
     }
@@ -164,12 +177,10 @@ client.on("message", async message => {
 
     switch (splitStrs[1]) {
       case "-a": {
-        console.log(`add:${splitStrs[1]}`);
         sendMessage(await addChannel(channel, splitStrs[2]));
         break;
       }
       case "-d": {
-        console.log(`delete:${splitStrs[1]}`);
         sendMessage(await deleteChannel(channel, splitStrs[2]));
         break;
       }
