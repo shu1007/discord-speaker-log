@@ -56,7 +56,7 @@ client.on("voiceStateUpdate", async (_, member) => {
       const channels = client.channels;
       const voiceChannel = channels.get(voiceChannelId);
       voiceChannelCache.textChannels.forEach(chId => {
-        channels.get(chId).send(`${member} is speaking in ${voiceChannel}`);
+        channels.get(chId).send(`${member} is speaking in ${voiceChannel}.`);
       });
     }
   }
@@ -111,7 +111,7 @@ const deleteChannel = async (textChannel, voiceCnannelName) => {
     return `${voiceCnannelName} is not exists.`;
   }
   const voiceChannelId = voiceChannel.id;
-  const noChannelMessase = `${voiceCnannelName} was not added ${textChannel.name}.`;
+  const noChannelMessase = `${voiceCnannelName} was not added to ${textChannel.name}.`;
   const voiceChannelCache =
     cache[guildId] !== undefined ? cache[guildId][voiceChannelId] : undefined;
 
