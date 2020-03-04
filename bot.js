@@ -50,22 +50,22 @@ client.on("channelDelete", async channel => {
 });
 
 client.on("voiceStateUpdate", async (_, member) => {
-  if (!member.mute) {
-    const guildId = member.guild.id;
-    const voiceChannelId = member.voiceChannel.id;
-    if (cache[guildId] === undefined) {
-      cache[guildId] = await getGuildData(guildId);
-    }
+  if (member.mute || member.voiceChannel === undefined) return;
 
-    const voiceChannelCache = cache[member.guild.id][voiceChannelId];
+  const guildId = member.guild.id;
+  const voiceChannelId = member.voiceChannel.id;
+  if (cache[guildId] === undefined) {
+    cache[guildId] = await getGuildData(guildId);
+  }
 
-    if (voiceChannelCache !== undefined) {
-      const channels = client.channels;
-      const voiceChannel = channels.get(voiceChannelId);
-      voiceChannelCache.textChannels.forEach(chId => {
-        channels.get(chId).send(`${member} is speaking in ${voiceChannel}.`);
-      });
-    }
+  const voiceChannelCache = cache[guildId][voiceChannelId];
+
+  if (voiceChannelCache !== undefined) {
+    const channels = client.channels;
+    const voiceChannel = channels.get(voiceChannelId);
+    voiceChannelCache.textChannels.forEach(chId => {
+      channels.get(chId).send(`${member} is speaking in ${voiceChannel}.`);
+    });
   }
 });
 
