@@ -17,10 +17,7 @@ const GUILDS = "guilds";
 const VOICE_CHANNNELS = "voidceChannels";
 
 exports.getGuildData = async guildId => {
-  const snapshot = await db
-    .collection(GUILDS)
-    .doc(guildId)
-    .collection(VOICE_CHANNNELS)
+  const snapshot = await getVoiceChannelsCollectionRef(guildId)
     .get()
     .catch(console.error);
 
@@ -34,73 +31,41 @@ exports.getGuildData = async guildId => {
 };
 
 exports.addVoiceChannel = async (guildId, voiceChannnelId, textChannelId) => {
-  let result = true;
-  await db
-    .collection(GUILDS)
-    .doc(guildId)
-    .collection(VOICE_CHANNNELS)
-    .doc(voiceChannnelId)
-    .set({
-      textChannels: [textChannelId]
-    })
-    .catch(e => {
-      console.error(e);
-      result = false;
-    });
-
-  return result;
+  return executeDbAction(
+    getVoiceChannelsCollectionRef(guildId)
+      .doc(voiceChannnelId)
+      .set({
+        textChannels: [textChannelId]
+      })
+  );
 };
 
 exports.addTextChannel = async (guildId, voiceChannnelId, textChannelId) => {
-  let result = true;
-  await db
-    .collection(GUILDS)
-    .doc(guildId)
-    .collection(VOICE_CHANNNELS)
-    .doc(voiceChannnelId)
-    .update({
-      textChannels: firebase.firestore.FieldValue.arrayUnion(textChannelId)
-    })
-    .catch(e => {
-      console.error(e);
-      result = false;
-    });
-
-  return result;
+  return executeDbAction(
+    getVoiceChannelsCollectionRef(guildId)
+      .doc(voiceChannnelId)
+      .update({
+        textChannels: firebase.firestore.FieldValue.arrayUnion(textChannelId)
+      })
+  );
 };
 
 exports.deleteTextChannel = async (guildId, voiceChannnelId, textChannelId) => {
-  let result = true;
-  await db
-    .collection(GUILDS)
-    .doc(guildId)
-    .collection(VOICE_CHANNNELS)
-    .doc(voiceChannnelId)
-    .update({
-      textChannels: firebase.firestore.FieldValue.arrayRemove(textChannelId)
-    })
-    .catch(e => {
-      console.error(e);
-      result = false;
-    });
-
-  return result;
+  return executeDbAction(
+    getVoiceChannelsCollectionRef(guildId)
+      .doc(voiceChannnelId)
+      .update({
+        textChannels: firebase.firestore.FieldValue.arrayRemove(textChannelId)
+      })
+  );
 };
 
 exports.deleteVoiceChannel = async (guildId, voiceChannnelId) => {
-  let result = true;
-  await db
-    .collection(GUILDS)
-    .doc(guildId)
-    .collection(VOICE_CHANNNELS)
-    .doc(voiceChannnelId)
-    .delete()
-    .catch(e => {
-      console.error(e);
-      result = false;
-    });
-
-  return result;
+  return executeDbAction(
+    getVoiceChannelsCollectionRef(guildId)
+      .doc(voiceChannnelId)
+      .delete()
+  );
 };
 
 exports.deleteTextChannelBatch = async (
@@ -108,8 +73,6 @@ exports.deleteTextChannelBatch = async (
   textChannelId,
   voiceChannnelIds
 ) => {
-  let result = true;
-
   const guildRef = db.collection(GUILDS).doc(guildId);
   const batch = db.batch();
   voiceChannnelIds.forEach(vId => {
@@ -117,9 +80,22 @@ exports.deleteTextChannelBatch = async (
       textChannels: firebase.firestore.FieldValue.arrayRemove(textChannelId)
     });
   });
-  batch.commit().catch(e => {
+
+  return executeDbAction(batch.commit());
+};
+
+async function executeDbAction(dbPromise) {
+  let result = true;
+  await dbPromise.catch(e => {
     result = false;
     console.error(e);
   });
   return result;
-};
+}
+
+function getVoiceChannelsCollectionRef(guildId) {
+  return db
+    .collection(GUILDS)
+    .doc(guildId)
+    .collection(VOICE_CHANNNELS);
+}
