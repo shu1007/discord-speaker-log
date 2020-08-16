@@ -58,11 +58,11 @@ client.on('channelDelete', async channel => {
   console.log(message);
 });
 
-client.on('voiceStateUpdate', async (_, member) => {
-  if (member.mute || member.voiceChannel === undefined) return;
+client.on('voiceStateUpdate', async (_, newVoiceState) => {
+  if (newVoiceState.mute || newVoiceState.channel === undefined) return;
 
-  const guildId = member.guild.id;
-  const voiceChannelId = member.voiceChannel.id;
+  const guildId = newVoiceState.guild.id;
+  const voiceChannelId = newVoiceState.channel.id;
   await acquireGuildData(guildId);
   const voiceChannelCache = cache[guildId][voiceChannelId];
 
@@ -70,7 +70,9 @@ client.on('voiceStateUpdate', async (_, member) => {
     const channels = client.channels.cache;
     const voiceChannel = channels.get(voiceChannelId);
     voiceChannelCache.textChannels.forEach(chId => {
-      channels.get(chId).send(`${member} is speaking in ${voiceChannel}.`);
+      channels
+        .get(chId)
+        .send(`${newVoiceState.member} is speaking in ${voiceChannel}.`);
     });
   }
 });
