@@ -1,13 +1,13 @@
-const Discord = require("discord.js");
+const Discord = require('discord.js');
 const {
   addTextChannel,
   addVoiceChannel,
   deleteTextChannel,
   deleteVoiceChannel,
   deleteTextChannelBatch,
-  getGuildData
-} = require("./firestoreUtil");
-require("dotenv").config();
+  getGuildData,
+} = require('./firestoreUtil');
+require('dotenv').config();
 
 const client = new Discord.Client();
 const cache = {};
@@ -15,28 +15,28 @@ const acquiredGuildIds = [];
 
 const acquireGuildData = async guildId => {
   if (!acquiredGuildIds.includes(guildId)) {
-    console.log("Get guild data from firestore.");
+    console.log('Get guild data from firestore.');
     cache[guildId] = await getGuildData(guildId);
     acquiredGuildIds.push(guildId);
   }
 };
 
-client.on("ready", () => console.log("start server."));
+client.on('ready', () => console.log('start server.'));
 
-client.on("channelDelete", async channel => {
+client.on('channelDelete', async channel => {
   const guildId = channel.guild.id;
   await acquireGuildData(guildId);
 
   const channelId = channel.id;
   let message;
-  if (channel.type === "voice" && cache[guildId][channelId] !== undefined) {
+  if (channel.type === 'voice' && cache[guildId][channelId] !== undefined) {
     if (await deleteVoiceChannel(guildId, channelId)) {
       delete cache[guildId][channelId];
       message = `#${channel.name} is deleted`;
     } else {
       message = `Error occured for deleting #${channel.name}.`;
     }
-  } else if (channel.type === "text") {
+  } else if (channel.type === 'text') {
     const voiceChannelIds = Object.entries(cache[guildId])
       .filter(kvp => kvp[1].textChannels.includes(channelId))
       .map(kvp => kvp[0]);
@@ -58,7 +58,7 @@ client.on("channelDelete", async channel => {
   console.log(message);
 });
 
-client.on("voiceStateUpdate", async (_, member) => {
+client.on('voiceStateUpdate', async (_, member) => {
   if (member.mute || member.voiceChannel === undefined) return;
 
   const guildId = member.guild.id;
@@ -67,7 +67,7 @@ client.on("voiceStateUpdate", async (_, member) => {
   const voiceChannelCache = cache[guildId][voiceChannelId];
 
   if (voiceChannelCache !== undefined) {
-    const channels = client.channels;
+    const channels = client.channels.cache;
     const voiceChannel = channels.get(voiceChannelId);
     voiceChannelCache.textChannels.forEach(chId => {
       channels.get(chId).send(`${member} is speaking in ${voiceChannel}.`);
@@ -76,14 +76,14 @@ client.on("voiceStateUpdate", async (_, member) => {
 });
 
 const getVoiceChannel = (chName, guildId) => {
-  return client.channels.find(
-    ch => ch.type === "voice" && ch.name == chName && ch.guild.id === guildId
+  return client.channels.cache.find(
+    ch => ch.type === 'voice' && ch.name == chName && ch.guild.id === guildId
   );
 };
 
 const addChannel = async (textChannel, voiceChannelName) => {
   if (voiceChannelName === undefined) {
-    return "Please specify a channel name.";
+    return 'Please specify a channel name.';
   }
 
   const guildId = textChannel.guild.id;
@@ -96,7 +96,7 @@ const addChannel = async (textChannel, voiceChannelName) => {
   await acquireGuildData(guildId);
   const voiceChannelCache = cache[guildId][voiceChannelId];
   const sucessMessage = `#${voiceChannelName} is added!`;
-  const errorMessage = "[Add channel]Error has occurred.";
+  const errorMessage = '[Add channel]Error has occurred.';
   const textChannelId = textChannel.id;
   if (voiceChannelCache === undefined) {
     if (await addVoiceChannel(guildId, voiceChannelId, textChannelId)) {
@@ -122,7 +122,7 @@ const addChannel = async (textChannel, voiceChannelName) => {
 
 const deleteChannel = async (textChannel, voiceChannelName) => {
   if (voiceChannelName === undefined) {
-    return "Please specify a channel name.";
+    return 'Please specify a channel name.';
   }
 
   const guildId = textChannel.guild.id;
@@ -149,49 +149,49 @@ const deleteChannel = async (textChannel, voiceChannelName) => {
     );
     return `#${voiceChannelName} is deleted!`;
   } else {
-    return "[Delete Channel]Error has occurred.";
+    return '[Delete Channel]Error has occurred.';
   }
 };
 
 const getVoiceChannelList = async (guildId, textChannelId) => {
   await acquireGuildData(guildId);
 
-  const channels = client.channels;
+  const channels = client.channels.cache;
   const list = Object.entries(cache[guildId])
     .filter(kvp => kvp[1].textChannels.includes(textChannelId))
     .map(kvp => channels.get(kvp[0]))
-    .join("\n");
+    .join('\n');
 
-  return list === "" ? "Not yet added." : list;
+  return list === '' ? 'Not yet added.' : list;
 };
 
-const COMMAND_PREFIX = "!sl";
+const COMMAND_PREFIX = '!sl';
 const HELP_MESSAGE = `add: ${COMMAND_PREFIX} -a <VOICE CHANNEL NAME>\ndelete: ${COMMAND_PREFIX} -d <VOICE CHANNEL NAME>\nshowList: ${COMMAND_PREFIX} -l`;
 
-client.on("message", async message => {
-  if (message.channel.type !== "text") return;
+client.on('message', async message => {
+  if (message.channel.type !== 'text') return;
 
   const content = message.content;
   if (!content.startsWith(COMMAND_PREFIX)) return;
 
   const channel = message.channel;
   const sendMessage = m => channel.send(m).catch(console.err);
-  const splitStrs = content.split(" ");
+  const splitStrs = content.split(' ');
   if (splitStrs.length < 2 || splitStrs.length > 3) {
     sendMessage(HELP_MESSAGE);
     return;
   }
 
   switch (splitStrs[1]) {
-    case "-a": {
+    case '-a': {
       sendMessage(await addChannel(channel, splitStrs[2]));
       break;
     }
-    case "-d": {
+    case '-d': {
       sendMessage(await deleteChannel(channel, splitStrs[2]));
       break;
     }
-    case "-l": {
+    case '-l': {
       sendMessage(await getVoiceChannelList(channel.guild.id, channel.id));
       break;
     }
